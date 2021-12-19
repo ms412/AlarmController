@@ -1,0 +1,18 @@
+#Contents of /etc/systemd/system/AlarmMonitor.service
+#systemctl daemon-reload
+#systemctl enable AlarmMonitor.service
+#systemctl start AlarmMonitor.service
+
+[Unit]
+Description=AlarmMonitor
+After=multi-user.target
+
+[Service]
+Type=idle
+ExecStart=/opt/AlarmMonitor/AlarmMonitor.py
+Restart=on-failure
+RestartSec=5s
+
+
+[Install]
+WantedBy=multi-user.target
