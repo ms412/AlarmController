@@ -147,6 +147,11 @@ class AlarmController(object):
     def publishUpdate(self):
         self._log.debug('Send Update State')
         _configTopic = self._configBroker.get('PUBLISH','/SMARTHOME/DEFAULT')
+
+        _topic = _configTopic + '/' + 'SYSTEM_STATE'
+        #self._log.info('SYSTEM_STATE: %s'%(self._systemState))
+        self._mqtt.publish(_topic, self._systemState)
+
         for key, item  in self._inputObjectRegister.items():
             _payload = item.state()
             if _payload is None:
@@ -156,9 +161,7 @@ class AlarmController(object):
           #  print(_topic, item.state(), type(item.state()))
             self._mqtt.publish(_topic,item.state())
 
-        _topic = _configTopic + '/' + 'SYSTEM_STATE'
-        #self._log.info('SYSTEM_STATE: %s'%(self._systemState))
-        self._mqtt.publish(_topic, self._systemState)
+
         return True
 
     def start(self):

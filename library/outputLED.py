@@ -61,6 +61,6 @@ class LED(object):
         self._log.debug('Set LED %s to YELLOW', self._id)
 
         _x = 0x01 << self._bit
-        self._handle.writeB(self._handle.readA() | _x)
+        self._handle.writeA(self._handle.readA() | _x)
         self._handle.writeB(self._handle.readB() | _x)
         self._pinState = 'YELLOW'

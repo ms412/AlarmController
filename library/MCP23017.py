@@ -27,9 +27,9 @@ class MCP23017(object):
         return self._bus.read_byte_data(self._address,0x13)
 
     def writeA(self,value):
-       # print(value)
+       # print('writeA',value)
         self._bus.write_byte_data(self._address,0x12,value)
 
     def writeB(self,value):
-        #print(value)
+        #print('writeB',value)
         self._bus.write_byte_data(self._address,0x13,value)

@@ -28,14 +28,13 @@ class inputObject(object):
 
     def setup(self):
        # self._io = IO(self._gpio)
+        self._log.debug('Setup IO: %d, ID: %s, State: %s ' % (self._io, self._id, self._state))
         self._gpio.setmode(self._gpio.BCM)
         self._gpio.setup(self._io, self._gpio.IN, pull_up_down=self._gpio.PUD_UP)
 
         self._state = self._mapping.get(self._gpio.input(self._io))
        # print(self._io,type(self._io))
         self._gpio.add_event_detect(self._io,self._gpio.BOTH, self.event)
-
-        self._log.debug('Setup IO: %d, ID: %s, State: %s '%(self._io, self._id, self._state))
 
     def event(self,io):
 
@@ -58,6 +57,9 @@ class inputObject(object):
 
     def mode(self):
         return self._mode
+
+class outputObjcet(object):
+    pass
 
 class callbackTest(object):
 

@@ -14,8 +14,8 @@
 
 
 __app__ = "Alarm Monitor"
-__VERSION__ = "0.01"
-__DATE__ = "11.09.2021"
+__VERSION__ = "0.8"
+__DATE__ = "02.01.2022"
 __author__ = "Markus Schiesser"
 __contact__ = "M.Schiesser@gmail.com"
 __copyright__ = "Copyright (C) 2021 Markus Schiesser"
@@ -56,6 +56,7 @@ class AlarmMonitor(object):
         self._configLED = None
 
         self._ledDeviceList  = []
+        self._systemState = 'IDLE'
 
         self._bus = None
         self._address = 0x00
@@ -71,7 +72,7 @@ class AlarmMonitor(object):
     def readConfig(self):
 
         _config = ConfigObj(self._configfile)
-        print(_config)
+     #   print(_config)
 
         if bool(_config) is False:
             print('ERROR config file not found',self._configfile)
@@ -122,114 +123,93 @@ class AlarmMonitor(object):
 
     def startBuzzer(self):
         self._buzzer = Buzzer(16)
+        time.sleep(2)
+        self._buzzer.start()
+       # self._buzzer.command('TONE4')
+        #time.sleep(10)
+        #self._buzzer.command('TONE4')
+        print('next')
 
     def brokerCallback(self,client,userdata,msg):
         self._log.debug('mqttCallback: Topic ' + msg.topic + " QOS: " + str(msg.qos) + " Payload: " + str(msg.payload))
         _topic = msg.topic
 
-        try:
-            self.setLED(msg.topic,msg.payload.decode("utf-8"))
-        except:
-            self._log.error('brockerCallback evalutation of Mqtt message failed: %s'% str(msg.payload))
+        #try:
+        self.setLED(msg.topic,msg.payload.decode("utf-8"))
+        #except:
+         #   self._log.error('brockerCallback evalutation of Mqtt message failed: %s'% str(msg.payload))
 
         return True
 
     def startLED(self):
-        print('startLED')
+        self._log.info('Start LED')
         _device = MCP23017(int(self._configDevice.get('I2C',1)),self._configDevice.get('ADDRESS',0x20))
 
         for k,v in self._configLED.items():
             self._ledDeviceList.append(LED(str(k),int(v),_device,self._rootLoggerName))
 
+        self._log.debug('Led Device List %s',self._ledDeviceList)
         return True
 
     def setLED(self,topic,payload):
-        print('setLED')
+      #  print('setLED')
+        self._log.debug('Update Led %s',payload)
 
         _device = topic.split('/')[-1]
 
-        for _item in self._ledDeviceList:
-            if _device == _item.deviceId():
-          #      print(str(payload))
-                if 'OPEN' == str(payload) or 'UNLOCK' == str(payload):
-                    if 'GREEN' == _item.pinState():
-                        self._buzzer.tone1()
-                    _item.setRed()
+        _systemStateTemp = False
+        if _device == 'SYSTEM_STATE':
+            _systemStateTemp = str(payload)
 
-                elif 'CLOSE' == str(payload) or 'LOCK' == str(payload):
-                    if 'RED' == _item.pinState():
-                        self._buzzer.tone2()
-                    _item.setGreen()
-                else:
-                    self._log.error('UNKNOWN Port State')
+        self._log.debug('System State %s %s'%(self._systemState, _systemStateTemp))
+
+     #   if _device == 'SYSTEM_STATE':
+
+        if 'IDLE' == self._systemState and _systemStateTemp == False:
+            self._log.debug('System State in mode IDEL')
+            for _item in self._ledDeviceList:
+                if _device == _item.deviceId():
+                    #      print(str(paylosead))
+                    if 'OPEN' == str(payload) or 'UNLOCK' == str(payload):
+                        if 'GREEN' == _item.pinState():
+                            self._buzzer.TONE1()
+                            self._log.info("Change ID %s, change from RED to GREEN", _item.deviceId)
+                        _item.setRed()
+
+                    elif 'CLOSE' == str(payload) or 'LOCK' == str(payload):
+                        if 'RED' == _item.pinState():
+                            self._buzzer.TONE2()
+                            self._log.info("Change ID %s, change from GREEN to RED", _item.deviceId)
+                        _item.setGreen()
+                    else:
+                        self._log.error('UNKNOWN Port State')
+        elif 'IDLE' != self._systemState and 'IDLE' == _systemStateTemp:
+            self._log.info('System State Changed from %s to %s', self._systemState, _systemStateTemp)
+            self._buzzer.TONE_OFF()
+            self._systemState = _systemStateTemp
+
+        elif 'ARMED' != self._systemState and 'ARMED' == _systemStateTemp:
+            # changed system State to ARMED
+            self._log.info('System State Changed from %s to %s', self._systemState, _systemStateTemp)
+            self._systemState = _systemStateTemp
+            self._buzzer.TONE3()
+            for _item in self._ledDeviceList:
+                _item.setYellow()
+
+        elif 'ALARM' != self._systemState and 'ALARM' == _systemStateTemp:
+            self._log.info('System State Changed from %s to %s', self._systemState, _systemStateTemp)
+            self._buzzer.TONE_ON()
+            self._systemState = _systemStateTemp
+            for _item in self._ledDeviceList:
+                _item.setRed()
+
+        elif 'PANIC' != self._systemState and 'PANIC' == _systemStateTemp:
+            self._log.info('System State Changed from %s to %s', self._systemState, _systemStateTemp)
+            self._buzzer.TONE4()
+            self._systemState = _systemStateTemp
 
         return True
 
-    def startLEDold(self):
-        print('START LED')
-        self._bus = smbus.SMBus(1)
-        self._address = 0x20
-        self._bus.write_byte_data(self._address,0x00,0x00) #Output
-        self._bus.write_byte_data(self._address,0x01,0x00)
-        self._bus.write_byte_data(self._address, 0x12, 0x00)
-        self._bus.write_byte_data(self._address, 0x13, 0x00)
-
-
-    def setLEDold(self,topic,payload):
-       # print(topic)
-
-        if 'OPEN' in str(payload):
-            state = 1
-        else:
-            state = 0
-      #  print('STATE: ',state)
-        item = topic.split('/')[-1]
-        print(item, state)
-        x = 0x01
-        if 'KITCHEN' == item:
-            x = 0x01 << 5
-        elif 'EATING' == item:
-            x = 0x01 << 4
-        elif 'BATH' == item:
-            x = 0x01 << 3
-        elif 'FRONTDOOR' == item:
-            x = 0x01 << 2
-        elif 'FRONTDOORLOCK' == item:
-            x = 0x01 << 7
-        elif 'BACKDOORLOCK' == item:
-            x = 0x01 << 6
-        elif 'PANIK' == item:
-            x = 0x01 << 1
-        elif 'RESET' == item:
-            x = 0x01
-        else:
-            print('NOT FOUND')
-            x = 0x00
-
-        if state:
-            _valueB = self._bus.read_byte_data(self._address,0x13)
-            _yB = _valueB & ~x
-            print('xx',_yB,_valueB,~x)
-            self._bus.write_byte_data(0x20, 0x13, _yB)
-
-            _value = self._bus.read_byte_data(self._address, 0x12)
-            _y = _value | x
-            print('CLOSE',_y,_value,x)
-            self._bus.write_byte_data(0x20, 0x12, _y)
-        else:
-            _valueB = self._bus.read_byte_data(self._address,0x12)
-            _yB = _valueB & ~x
-            print('yy', _yB, _valueB, ~x)
-            self._bus.write_byte_data(0x20, 0x12, _yB)
-
-            _value = self._bus.read_byte_data(self._address, 0x13)
-            _y = _value | x
-            print('OPEN',_y, _value, x)
-            self._bus.write_byte_data(0x20, 0x13, _y)
-
-       # print('%s %s d%'%(item,hex(x)))
-        print(item,x)
-        #self._bus.write_byte_data(0x20,0x12,x)
 
     def start(self):
         self.readConfig()
