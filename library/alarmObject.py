@@ -1,7 +1,8 @@
 import time
 import logging
+#from library.MCP23017 import MCP23008
 
-#from GPIOSimulator import RPI as GPIO
+from Gabage.GPIOSimulator import RPI as GPIO
 
 
 class inputObject(object):
@@ -37,11 +38,23 @@ class inputObject(object):
         self._gpio.add_event_detect(self._io,self._gpio.BOTH, self.event)
 
     def event(self,io):
-
         self._state = self._mapping.get(self._gpio.input(io))
         self._log.debug('I/O EVENT IO: %d, ID: %s, State: %s LowLevelState: %s' % (io, self._id, self._state,self._gpio.input(io)))
        # print(self._callback,self._state)
         self._callback(self,self._state)
+
+    def setState(self,newState):
+        _state = False
+
+        for key, item in self._mapping.items():
+            if item == newState:
+                _state = True
+
+        if _state:
+            self._state = newState
+            self._callback(self,self._state)
+
+        return _state
 
     def state(self):
         return self._state
@@ -59,7 +72,12 @@ class inputObject(object):
         return self._mode
 
 class outputObjcet(object):
-    pass
+
+    def __init__(self):
+        self._io = MCP23008(1,0x20)
+
+    def write(self):
+        pass
 
 class callbackTest(object):
 

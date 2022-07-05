@@ -207,6 +207,8 @@ class AlarmMonitor(object):
             self._log.info('System State Changed from %s to %s', self._systemState, _systemStateTemp)
             self._buzzer.TONE4()
             self._systemState = _systemStateTemp
+            for _item in self._ledDeviceList:
+                _item.setRed()
 
         return True
 

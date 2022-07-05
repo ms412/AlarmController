@@ -27,18 +27,15 @@ import time
 import json
 import logging
 import uuid
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 
 from configobj import ConfigObj
 
-from library.mqttclient import mqttclient
+from library.mqttclientV2 import mqttclient
 from library.logger import loghandler
 from library.alarmObject import inputObject
-#from library.GPIOSimulator import RPI as GPIO
-
 from library.stateMachine import StateMachine
-#from library.alarmManager import Interface
-#from library.S0Manager import S0manager
+
 
 #class manager(threading.Thread):
 class AlarmController(object):
@@ -98,23 +95,37 @@ class AlarmController(object):
         self._log.debug('Methode: startMqtt()')
         self._mqtt = mqttclient(self._rootLoggerName)
 
-        _list = []
+       # _list = []
+
+        #_subscribe = (self._configBroker['SUBSCRIBE']) + '/#'
+        #_callback = self.brokerCallback
+
+        #_list.append({'SUBSCRIBE': _subscribe, 'CALLBACK': _callback})
+        #self._configBroker['SUBSCRIPTION'] = _list
+        _host = self._configBroker.get('HOST','localhost')
+        _port = self._configBroker.get('PORT',1883)
+
+        _state = False
+        while not _state:
+            _state = self._mqtt.connect(_host,_port)
+            if not _state:
+                self._log.error('Failed to connect to broker: %s',_host)
+                time.sleep(5)
+
+        self._log.debug('Sucessful connect to broker: %s',_host)
+
 
         _subscribe = (self._configBroker['SUBSCRIBE']) + '/#'
-        _callback = self.brokerCallback
+        self._mqtt.subscribe(_subscribe,self.brokerCallback)
 
-        _list.append({'SUBSCRIBE': _subscribe, 'CALLBACK': _callback})
-        self._configBroker['SUBSCRIPTION'] = _list
 
-        (state, message) = self._mqtt.fullclient(self._configBroker)
-        if state:
-            self._log.debug('mqtt completed with message %s', message)
-        else:
-            self._log.error('Failed to connect: %s', message)
 
-        return False
+        return True
 
-    def brokerCallback(self):
+    def brokerCallback(self, client, userdata, msg):
+        self._log.info('callback')
+        print('Callback ',client,userdata,msg)
+        print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
         pass
 
     def startStateMaschine(self):
@@ -126,8 +137,9 @@ class AlarmController(object):
 
         for key1,item1 in self._configInput.items():
             item1['ID'] = key1
-
             self._inputObjectRegister[key1]= inputObject(item1,gpioObject,self.inputcallback,self._rootLoggerName)
+
+        return True
 
     def inputcallback(self,object,state):
        # print(object.id(),object.type(),object.io(),state)

@@ -1,31 +1,45 @@
-import os
-#import RPi.GPIO as GPIO  # import the GPIO library
+#!/usr/bin/env python3
+
+import sys, json
+import asyncio
+from websockets import connect
+
+class EchoWebsocket:
+    async def __aenter__(self):
+        self._conn = connect('wss://ws.binaryws.com/websockets/v3')
+        self.websocket = await self._conn.__aenter__()
+        return self
+
+    async def __aexit__(self, *args, **kwargs):
+        await self._conn.__aexit__(*args, **kwargs)
+
+    async def send(self, message):
+        await self.websocket.send(message)
+
+    async def receive(self):
+        return await self.websocket.recv()
+
+class mtest:
+    def __init__(self):
+        self.wws = EchoWebsocket()
+        self.loop = asyncio.get_event_loop()
+
+    def get_ticks(self):
+        return self.loop.run_until_complete(self.__async__get_ticks())
+
+    async def __async__get_ticks(self):
+        async with self.wws as echo:
+            await echo.send(json.dumps({'ticks_history': 'R_50', 'end': 'latest', 'count': 1}))
+            return await echo.receive()
 
 
-def toneOn(duration):
-    if duration >= 255:
-        print('duration ON forever')
-    else:
-        print('sound ON for ',duration)
+if __name__ == "__main__":
+    a = mtest()
 
-def toneOff(duration):
-    if duration >= 255:
-        print('duration OFF forever')
-    else:
-        print('sound OFF for ',duration)
+    foo = a.get_ticks()
+    print(foo)
 
+    print("async works like a charm!")
 
-_sequence = [[1,0.1],[0,0.2],[1,0.3],[0,255]]
-for n in _sequence:
-    if 1 == n[0]:
-        print('Tone on for ',n[1])
-        toneOn(n[1])
-
-    else:
-        print('Tone off for ',n[1])
-        toneOff(n[1])
-while(_sequence):
-    print(_sequence)
-    _sequence = []
-print('end')
-
+    foo = a.get_ticks()
+    print(foo)

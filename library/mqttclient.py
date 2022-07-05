@@ -41,7 +41,7 @@ class mqttclient(object):
         return True
 
     def connect(self, host, port=1883, keepalive=60, bind_address=""):
-        self._log.debug('Methode: connect(%s, %d, %d)' % (host, port, keepalive))
+        self._log.debug('Methode: connect(%s,%s,%s)' % (host, port, keepalive))
         self._state['CONNECTED'] = False
 
         self._mqttc.connect_async(host, port, keepalive, bind_address)
